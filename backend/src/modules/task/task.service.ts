@@ -54,7 +54,7 @@ export class TaskService {
 
     const taskCount = await this.taskRepository.count({ workspace });
 
-    const title = `연구 ${taskCount + 1}`;
+    const title = `작업 ${taskCount + 1}`;
 
     const task = this.taskRepository.create({
       ...createDto,

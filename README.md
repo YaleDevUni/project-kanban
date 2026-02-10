@@ -6,14 +6,14 @@
 ## 📋 목차
 
 - [프로젝트 소개](#프로젝트-소개)
-- [주요 기능](#주요-기능)
 - [기술 스택](#기술-스택)
+- [주요 기능](#주요-기능)
 - [시스템 아키텍처](#시스템-아키텍처)
 - [데이터 모델 설계](#데이터-모델-설계)
 - [핵심 기술 구현](#핵심-기술-구현)
+- [프로젝트 구조](#프로젝트-구조)
 - [실행 방법](#실행-방법)
 - [API 문서](#api-문서)
-- [AI 활용 내역](#ai-활용-내역)
 
 ---
 
@@ -45,7 +45,6 @@
 | MikroORM | ORM (Optimistic Lock 지원) |
 | PostgreSQL | 데이터베이스 |
 | Passport | 인증 미들웨어 |
-| LexoRank | 순서 정렬 알고리즘 |
 | Swagger | API 문서화 |
 
 ### DevOps
@@ -58,9 +57,13 @@
 
 ### 데모
 
-| 로그인 | 칸반 보드 |
+| 로그인 | 회원가입 |
 |--------|----------|
-| ![Login](https://via.placeholder.com/400x300?text=Login+Page) | ![Board](https://via.placeholder.com/400x300?text=Kanban+Board) |
+| ![Login](./public/login.png) | ![Register](./public/register.png) |
+
+| 워크스페이스 | 칸반 보드 |
+|-------------|----------|
+| ![Workspace](./public/workspace.png) | ![Board](./public/board.png) |
 
 ---
 
@@ -100,19 +103,56 @@
 
 ## 시스템 아키텍처
 
+![System Architecture](./public/system.png)
+
+### 설계 결정 사항
+
+#### 프론트엔드 ↔ 백엔드 통신
+| 구분 | 기술 | 선택 이유 |
+|------|------|----------|
+| API 통신 | REST API + Axios | 리소스 기반 CRUD에 적합, 간단한 구현 |
+| 실시간 동기화 | SSE (Server-Sent Events) | WebSocket 대비 구현 복잡도 낮음, 서버→클라이언트 단방향 통신으로 충분 |
+
+#### 상태 관리 전략
+| 상태 유형 | 기술 | 관리 대상 |
+|----------|------|----------|
+| 서버 상태 | TanStack Query | API 응답 캐싱, 자동 리페칭, 뮤테이션 |
+| 클라이언트 상태 | Zustand | 검색어, Optimistic UI용 로컬 상태 |
+
+#### 백엔드 아키텍처
+- **모듈 기반 설계**: NestJS의 모듈 시스템으로 기능별 분리 (auth, user, workspace, task)
+- **이벤트 기반 통신**: EventEmitter를 활용한 모듈 간 느슨한 결합
+- **계층 분리**: Controller → Service → Repository 패턴 적용
+
+#### 데이터베이스
+- **PostgreSQL 선택 이유**: 트랜잭션 지원, Optimistic Lock 지원
+- **ORM**: MikroORM 사용 PostgreSQL에 다양한 기능지원.
+
+#### 컨테이너화
+- **Docker Compose**: Frontend, Backend, PostgreSQL을 단일 명령으로 실행
+- **환경 분리**: 개발/운영 환경별 설정 분리 가능
 
 ---
 
 ## 데이터 모델 설계
 
-
+![ERD](./public/erd.png)
 
 ### 설계 결정 사항
+
+#### Workspace – Task 관계 (식별 관계)
+- Task는 반드시 하나의 Workspace에 속해야 함
+- Workspace 삭제 시 하위 Task도 함께 삭제 (Cascade Delete)
+- `orphanRemoval: true` 적용으로 고아 객체 자동 제거
 
 #### User – Task 관계 (비식별 관계)
 - User가 삭제되어도 Task는 유지되어야 하는 비즈니스 요구사항
 - `deleteRule: 'set null'` 적용으로 User 삭제 시 Task의 user_id만 NULL 처리
 - Task는 User의 생명주기에 종속되지 않음
+
+#### User – Workspace 관계
+- Workspace는 생성자(creator)를 가짐
+- 생성자만 Workspace 수정/삭제 가능 (권한 제어)
 
 #### 동시성 제어
 - `version` 필드를 통한 Optimistic Locking
@@ -217,52 +257,29 @@ try {
 }
 ```
 
----
+### 4. N+1 문제 해결 (Eager Loading)
 
-## 실행 방법
+**문제 상황**
+- Task 목록 조회 시 각 Task의 User 정보를 개별 쿼리로 가져오면 N+1 문제 발생
+- Task 10개 조회 시 → 1(Task 목록) + 10(각 User 조회) = 11번의 쿼리 실행
 
-### 사전 요구사항
-- Docker & Docker Compose
-- Node.js 20+ (로컬 개발 시)
+**해결 방안: MikroORM의 `populate` 옵션으로 Eager Loading**
+```typescript
+// task.service.ts - findAll
+const tasks = await this.taskRepository.find(query, {
+  populate: ['user'],  // User를 함께 로드하여 N+1 방지
+  fields: ['id', 'title', 'status', 'user.name', 'position', 'version'],
+  orderBy: { position: 'ASC' },
+});
 
-### Docker Compose로 실행 (권장)
-
-```bash
-# 1. 프로젝트 클론
-git clone https://github.com/your-repo/project-kanban.git
-cd project-kanban
-
-# 2. 환경 변수 설정 (선택사항 - 기본값 제공)
-# backend/.env.example과 frontend/.env.example 참고
-
-# 3. 전체 서비스 실행
-docker compose up -d
-
-# 4. 접속
-# Frontend: http://localhost:5173
-# Backend API: http://localhost:3000
-# API 문서: http://localhost:3000/docs
+// workspace.service.ts - findAll
+const workspaces = await this.workspaceRepository.find({}, {
+  populate: ['creator'],  // Creator를 함께 로드하여 N+1 방지
+  orderBy: { createdAt: 'DESC' },
+});
 ```
 
-
-## API 문서
-
-서버 실행 후 Swagger UI에서 확인 가능합니다.
-
-📄 **API 문서 URL**: http://localhost:3000/docs
-
-### 주요 엔드포인트
-
-| Method | Endpoint | 설명 | 인증 |
-|--------|----------|------|------|
-| POST | /auth/register | 회원가입 | - |
-| POST | /auth/login | 로그인 (JWT 발급) | - |
-| GET | /tasks | 태스크 목록 조회 (검색 지원) | 필요 |
-| POST | /tasks | 태스크 생성 | 필요 |
-| PATCH | /tasks/:id | 태스크 수정 | 필요 |
-| PATCH | /tasks/:id/move | 태스크 이동 (상태/순서 변경) | 필요 |
-| DELETE | /tasks/:id | 태스크 삭제 | 필요 |
-| GET | /tasks/events | SSE 이벤트 스트림 | 필요 |
+→ 연관 엔티티를 한 번의 쿼리로 함께 로드하여 쿼리 수를 최소화
 
 ---
 
@@ -275,6 +292,7 @@ project-kanban/
 │   │   ├── modules/
 │   │   │   ├── auth/          # 인증 모듈 (JWT, Passport)
 │   │   │   ├── user/          # 사용자 모듈
+│   │   │   ├── workspace/     # 워크스페이스 모듈 (CRUD)
 │   │   │   ├── task/          # 태스크 모듈 (CRUD, SSE)
 │   │   │   └── health/        # 헬스체크
 │   │   ├── main.ts
@@ -298,4 +316,66 @@ project-kanban/
 ```
 
 ---
+
+
+## 실행 방법
+
+### 사전 요구사항
+- Docker & Docker Compose
+
+### Docker Compose로 실행 (권장)
+
+```bash
+# 1. 프로젝트 클론
+git clone https://github.com/your-repo/project-kanban.git
+cd project-kanban
+
+# 2. 환경 변수 설정 (선택사항 - 기본값 제공)
+# backend/.env.example과 frontend/.env.example 참고
+
+# 3. 전체 서비스 실행
+docker compose up -d
+```
+기본 접속 정보
+ - Frontend: http://localhost:5173
+ - Backend API: http://localhost:3000
+ - API 문서: http://localhost:3000/docs
+
+
+
+## API 문서
+
+서버 실행 후 Swagger UI에서 확인 가능합니다.
+
+📄 **API 문서 URL**: http://localhost:3000/docs
+
+### 주요 엔드포인트
+
+#### 인증
+| Method | Endpoint | 설명 | 인증 |
+|--------|----------|------|------|
+| POST | /auth/register | 회원가입 | - |
+| POST | /auth/login | 로그인 (JWT 발급) | - |
+
+#### 워크스페이스
+| Method | Endpoint | 설명 | 인증 |
+|--------|----------|------|------|
+| GET | /workspaces | 워크스페이스 목록 조회 | 필요 |
+| GET | /workspaces/:id | 워크스페이스 상세 조회 | 필요 |
+| POST | /workspaces | 워크스페이스 생성 | 필요 |
+| PATCH | /workspaces/:id | 워크스페이스 수정 (생성자만) | 필요 |
+| DELETE | /workspaces/:id | 워크스페이스 삭제 (생성자만) | 필요 |
+
+#### 태스크
+| Method | Endpoint | 설명 | 인증 |
+|--------|----------|------|------|
+| GET | /workspaces/:workspaceId/tasks | 태스크 목록 조회 (검색 지원) | 필요 |
+| POST | /workspaces/:workspaceId/tasks | 태스크 생성 | 필요 |
+| PATCH | /workspaces/:workspaceId/tasks/:id | 태스크 수정 | 필요 |
+| PATCH | /workspaces/:workspaceId/tasks/:id/move | 태스크 이동 (상태/순서 변경) | 필요 |
+| DELETE | /workspaces/:workspaceId/tasks/:id | 태스크 삭제 | 필요 |
+| GET | /workspaces/:workspaceId/tasks/events | SSE 이벤트 스트림 | 필요 |
+
+---
+
 
