@@ -1,0 +1,105 @@
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-gov.min.css');
+
+@import 'tailwindcss';
+@theme {
+  --color-auth-bg: #f1f1f1;
+  --font-pretendard: 'Pretendard GOV Variable', sans-serif;
+  --color-indicator-red: #ec0000;
+  --color-input-gray: #f4f4f5;
+  --color-placeholder-gray: #a1a1aa;
+  --color-header-black: #1a1a1a;
+  --color-input-black: #27272a;
+  --color-disabled-purple: #e0d7ff;
+  --color-button-purple: #7c35ff;
+  --color-link-register: #71717a;
+  --color-disabled-puple-text: #d6c2fd;
+  --color-todo-label: #bfc9de;
+  --color-todo: #edf1fa;
+  --color-doing: #f8f7fb;
+  --color-doing-label: #e0dbef;
+  --color-done: #f4f4f5;
+  --color-done-label: #dadae0;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-pretendard);
+  }
+  /* input::placeholder,
+  textarea::placeholder {
+    color: #111;
+    font-weight: 10;
+  } */
+}
+
+/* @theme {
+  --color-primary: #c4b5fd;
+  --color-primary-hover: #a78bfa;
+  --color-primary-light: #ede9fe;
+  --color-bg: #f0f0f3;
+  --color-card: #ffffff;
+  --color-card-shadow: rgba(0, 0, 0, 0.04);
+  --color-text: #1e1b4b;
+  --color-text-muted: #6b7280;
+  --color-border: #e5e7eb;
+  --color-input-bg: #f9fafb;
+  --color-todo: #ede9fe;
+  --color-doing: #dbeafe;
+  --color-done: #dcfce7;
+  --color-todo-header: #c4b5fd;
+  --color-doing-header: #93c5fd;
+  --color-done-header: #86efac;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+input::placeholder {
+  color: #9ca3af;
+}
+
+input:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 3px rgba(196, 181, 253, 0.25);
+}
+
+/* 스크롤바 스타일 */
+/* ::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+} */
+
+/* 드래그 카드 스타일 */
+/* [data-dragging="true"] {
+  opacity: 0.5;
+  transform: rotate(2deg);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+  transition: none !important;
+}
+
+[data-dragover="true"] {
+  background-color: var(--color-primary-light) !important;
+  border: 2px dashed var(--color-primary) !important;
+} */

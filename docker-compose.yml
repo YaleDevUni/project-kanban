@@ -1,0 +1,76 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: kanban-postgres
+    restart: unless-stopped
+    ports:
+      - '5433:5432'
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-kanban}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-your_password_here}
+      POSTGRES_DB: ${POSTGRES_DB:-kanban_db}
+      TZ: ${TZ:-Asia/Seoul}
+    command: >
+      postgres
+      -c timezone=${TZ:-Asia/Seoul}
+      -c log_timezone=${TZ:-Asia/Seoul}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${POSTGRES_USER:-kanban} -d ${POSTGRES_DB:-kanban_db}',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    container_name: kanban-backend
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ:-Asia/Seoul}
+      # below env will override .env value
+      - DB_HOST=db
+      - DB_PORT=5432
+    ports:
+      - '3000:3000'
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/.env.example:/app/.env.example:ro
+      - /app/node_modules
+    command: >
+      sh -c "
+      cp -n .env.example .env 2>/dev/null || true &&
+      npm run start:dev
+      "
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: kanban-frontend
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ:-Asia/Seoul}
+    ports:
+      - '5173:5173'
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/.env.example:/app/.env.example:ro
+      - /app/node_modules
+    command: >
+      sh -c "
+      cp -n .env.example .env 2>/dev/null || true &&
+      npm run dev -- --host
+      "
+
+volumes:
+  postgres_data:
