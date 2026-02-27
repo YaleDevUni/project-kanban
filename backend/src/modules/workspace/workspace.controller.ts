@@ -6,7 +6,6 @@ import {
   Delete,
   Body,
   Param,
-  Req,
   UseGuards,
 } from '@nestjs/common';
 import { WorkspaceService } from './workspace.service';
@@ -21,6 +20,8 @@ import {
   ApiOkResponse,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { User } from '../user/user.entity';
 
 @ApiTags('Workspaces')
 @Controller('workspaces')
@@ -71,9 +72,9 @@ export class WorkspaceController {
   @ApiResponse({ status: 400, description: 'Bad Request.' })
   async create(
     @Body() createDto: CreateWorkspaceDto,
-    @Req() req: any,
+    @CurrentUser() user: User,
   ): Promise<Workspace> {
-    return await this.workspaceService.create(createDto, req.user);
+    return await this.workspaceService.create(createDto, user);
   }
 
   /**
@@ -92,9 +93,9 @@ export class WorkspaceController {
   async update(
     @Param('id') id: string,
     @Body() updateDto: UpdateWorkspaceDto,
-    @Req() req: any,
+    @CurrentUser() user: User,
   ): Promise<Workspace> {
-    return await this.workspaceService.update(id, updateDto, req.user);
+    return await this.workspaceService.update(id, updateDto, user);
   }
 
   /**
@@ -109,7 +110,7 @@ export class WorkspaceController {
   @ApiOkResponse({ description: 'Workspace deleted successfully.' })
   @ApiResponse({ status: 403, description: 'Forbidden. Only creator can delete.' })
   @ApiResponse({ status: 404, description: 'Workspace not found.' })
-  async delete(@Param('id') id: string, @Req() req: any) {
-    return await this.workspaceService.delete(id, req.user);
+  async delete(@Param('id') id: string, @CurrentUser() user: User) {
+    return await this.workspaceService.delete(id, user);
   }
 }

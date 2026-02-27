@@ -7,7 +7,6 @@ import {
   Body,
   Param,
   Query,
-  Req,
   Sse,
   MessageEvent,
   UseGuards,
@@ -28,6 +27,8 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { User } from '../user/user.entity';
 
 @ApiTags('Tasks')
 @Controller('workspaces/:workspaceId/tasks')
@@ -94,9 +95,9 @@ export class TaskController {
   async create(
     @Param('workspaceId') workspaceId: string,
     @Body() createDto: CreateTaskDto,
-    @Req() req: any,
+    @CurrentUser() user: User,
   ) {
-    return await this.taskService.create(workspaceId, createDto, req.user);
+    return await this.taskService.create(workspaceId, createDto, user);
   }
 
   /**
