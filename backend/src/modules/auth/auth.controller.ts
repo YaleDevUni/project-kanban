@@ -1,7 +1,9 @@
-import { Controller, Post, Body, UseGuards, Get, Req } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto, LoginDto } from './dto/auth.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { User } from '../user/user.entity';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('Auth')
@@ -61,14 +63,11 @@ export class AuthController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @UseGuards(JwtAuthGuard)
-  getProfile(
-    @Req()
-    req: Request & { user: { id: string; name: string; email: string } },
-  ) {
+  getProfile(@CurrentUser() user: User) {
     return {
-      id: req.user.id,
-      name: req.user.name,
-      email: req.user.email,
+      id: user.id,
+      name: user.name,
+      email: user.email,
     };
   }
 }

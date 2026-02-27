@@ -7,9 +7,7 @@ import {
   Body,
   Param,
   Query,
-  Req,
   Sse,
-  MessageEvent,
   UseGuards,
 } from '@nestjs/common';
 import { fromEvent, map, filter, Observable } from 'rxjs';
@@ -21,6 +19,11 @@ import { MoveTaskDto } from './dto/move-task.dto';
 import { TaskResponseDto } from './dto/task-response.dto';
 import { Task } from './task.entity';
 import {
+  TaskMessagePayload,
+  TaskSseMessageEvent,
+  TaskEventData,
+} from './types/task-event.types';
+import {
   ApiOperation,
   ApiResponse,
   ApiTags,
@@ -28,6 +31,8 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { User } from '../user/user.entity';
 
 @ApiTags('Tasks')
 @Controller('workspaces/:workspaceId/tasks')
@@ -48,14 +53,19 @@ export class TaskController {
     status: 200,
     description: 'SSE stream of task events.',
   })
-  sse(@Param('workspaceId') workspaceId: string): Observable<MessageEvent> {
-    return fromEvent(this.eventEmitter, 'task.message').pipe(
-      filter((payload: any) => payload.workspaceId === workspaceId),
+  sse(
+    @Param('workspaceId') workspaceId: string,
+  ): Observable<TaskSseMessageEvent<TaskEventData>> {
+    return fromEvent<TaskMessagePayload>(
+      this.eventEmitter,
+      'task.message',
+    ).pipe(
+      filter((payload) => payload.workspaceId === workspaceId),
       map(
-        (payload: any) =>
+        (payload): TaskSseMessageEvent<TaskEventData> =>
           ({
             data: { type: payload.type, data: payload.data },
-          }) as MessageEvent,
+          }) as TaskSseMessageEvent<TaskEventData>,
       ),
     );
   }
@@ -94,9 +104,9 @@ export class TaskController {
   async create(
     @Param('workspaceId') workspaceId: string,
     @Body() createDto: CreateTaskDto,
-    @Req() req: any,
+    @CurrentUser() user: User,
   ) {
-    return await this.taskService.create(workspaceId, createDto, req.user);
+    return await this.taskService.create(workspaceId, createDto, user);
   }
 
   /**
