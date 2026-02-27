@@ -15,6 +15,13 @@ import { User } from '../user/user.entity';
 import { Workspace } from '../workspace/workspace.entity';
 import { WorkspaceService } from '../workspace/workspace.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import {
+  TaskEventType,
+  TaskEventData,
+  TaskMessagePayload,
+} from './types/task-event.types';
+
+const TASK_MESSAGE_EVENT = 'task.message' as const;
 
 @Injectable()
 export class TaskService {
@@ -26,8 +33,13 @@ export class TaskService {
     private readonly em: EntityManager,
   ) {}
 
-  private emitChange(workspaceId: string, type: string, data: any): void {
-    this.eventEmitter.emit('task.message', { workspaceId, type, data });
+  private emitChange(
+    workspaceId: string,
+    type: TaskEventType,
+    data: TaskEventData,
+  ): void {
+    const payload: TaskMessagePayload = { workspaceId, type, data };
+    this.eventEmitter.emit(TASK_MESSAGE_EVENT, payload);
   }
 
   async create(

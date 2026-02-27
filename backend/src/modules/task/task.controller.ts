@@ -8,7 +8,6 @@ import {
   Param,
   Query,
   Sse,
-  MessageEvent,
   UseGuards,
 } from '@nestjs/common';
 import { fromEvent, map, filter, Observable } from 'rxjs';
@@ -19,6 +18,11 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 import { MoveTaskDto } from './dto/move-task.dto';
 import { TaskResponseDto } from './dto/task-response.dto';
 import { Task } from './task.entity';
+import {
+  TaskMessagePayload,
+  TaskSseMessageEvent,
+  TaskEventData,
+} from './types/task-event.types';
 import {
   ApiOperation,
   ApiResponse,
@@ -49,14 +53,19 @@ export class TaskController {
     status: 200,
     description: 'SSE stream of task events.',
   })
-  sse(@Param('workspaceId') workspaceId: string): Observable<MessageEvent> {
-    return fromEvent(this.eventEmitter, 'task.message').pipe(
-      filter((payload: any) => payload.workspaceId === workspaceId),
+  sse(
+    @Param('workspaceId') workspaceId: string,
+  ): Observable<TaskSseMessageEvent<TaskEventData>> {
+    return fromEvent<TaskMessagePayload>(
+      this.eventEmitter,
+      'task.message',
+    ).pipe(
+      filter((payload) => payload.workspaceId === workspaceId),
       map(
-        (payload: any) =>
+        (payload): TaskSseMessageEvent<TaskEventData> =>
           ({
             data: { type: payload.type, data: payload.data },
-          }) as MessageEvent,
+          }) as TaskSseMessageEvent<TaskEventData>,
       ),
     );
   }
