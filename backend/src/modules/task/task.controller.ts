@@ -8,6 +8,7 @@ import {
   Param,
   Query,
   Sse,
+  MessageEvent,
   UseGuards,
 } from '@nestjs/common';
 import { fromEvent, map, filter, Observable } from 'rxjs';
@@ -18,11 +19,7 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 import { MoveTaskDto } from './dto/move-task.dto';
 import { TaskResponseDto } from './dto/task-response.dto';
 import { Task } from './task.entity';
-import {
-  TaskMessagePayload,
-  TaskSseMessageEvent,
-  TaskEventData,
-} from './types/task-event.types';
+import type { TaskSSEMessagePayload } from './types/task-event.types';
 import {
   ApiOperation,
   ApiResponse,
@@ -55,18 +52,13 @@ export class TaskController {
   })
   sse(
     @Param('workspaceId') workspaceId: string,
-  ): Observable<TaskSseMessageEvent<TaskEventData>> {
-    return fromEvent<TaskMessagePayload>(
+  ): Observable<MessageEvent> {
+    return fromEvent<TaskSSEMessagePayload>(
       this.eventEmitter,
       'task.message',
     ).pipe(
-      filter((payload) => payload.workspaceId === workspaceId),
-      map(
-        (payload): TaskSseMessageEvent<TaskEventData> =>
-          ({
-            data: { type: payload.type, data: payload.data },
-          }) as TaskSseMessageEvent<TaskEventData>,
-      ),
+      filter((p: TaskSSEMessagePayload) => p.workspaceId === workspaceId),
+      map((p: TaskSSEMessagePayload) => ({ data: p })),
     );
   }
 

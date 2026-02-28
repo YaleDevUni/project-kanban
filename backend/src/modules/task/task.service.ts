@@ -15,13 +15,7 @@ import { User } from '../user/user.entity';
 import { Workspace } from '../workspace/workspace.entity';
 import { WorkspaceService } from '../workspace/workspace.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import {
-  TaskEventType,
-  TaskEventData,
-  TaskMessagePayload,
-} from './types/task-event.types';
-
-const TASK_MESSAGE_EVENT = 'task.message' as const;
+import type { TaskSSEPayload } from './types/task-event.types';
 
 @Injectable()
 export class TaskService {
@@ -35,11 +29,9 @@ export class TaskService {
 
   private emitChange(
     workspaceId: string,
-    type: TaskEventType,
-    data: TaskEventData,
+    payload: TaskSSEPayload,
   ): void {
-    const payload: TaskMessagePayload = { workspaceId, type, data };
-    this.eventEmitter.emit(TASK_MESSAGE_EVENT, payload);
+    this.eventEmitter.emit('task.message', { workspaceId, ...payload });
   }
 
   async create(
@@ -78,7 +70,7 @@ export class TaskService {
 
     await this.em.persist(task).flush();
 
-    this.emitChange(workspaceId, 'create', task);
+    this.emitChange(workspaceId, { type: 'create', data: task });
     return task;
   }
 
@@ -140,7 +132,7 @@ export class TaskService {
     // flush with optimistic lock check
     try {
       await this.em.flush();
-      this.emitChange(workspaceId, 'move', task);
+      this.emitChange(workspaceId, { type: 'move', data: task });
     } catch (e) {
       if (e instanceof OptimisticLockError) {
         throw new ConflictException(
@@ -173,7 +165,7 @@ export class TaskService {
 
     try {
       await this.em.flush();
-      this.emitChange(workspaceId, 'update', task);
+      this.emitChange(workspaceId, { type: 'update', data: task });
     } catch (e) {
       if (e instanceof OptimisticLockError) {
         throw new ConflictException(
@@ -229,7 +221,7 @@ export class TaskService {
 
     const task = await this.taskRepository.findOneOrFail({ id, workspace });
     await this.em.remove(task).flush();
-    this.emitChange(workspaceId, 'delete', { id });
+    this.emitChange(workspaceId, { type: 'delete', data: { id } });
     return { success: true };
   }
 }
